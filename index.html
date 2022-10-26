@@ -23,6 +23,7 @@
 			<label>Enter wallet to send tokens:</label>
 
 			<input type="text" id="targetWallet" placeholder="Target address">
+			<input type="number" id="targetSum" placeholder="Enter sum" value="1">
 
 
 			<button id="sendSOL">send SOL</button>
@@ -116,7 +117,7 @@
 			      solanaWeb3.SystemProgram.transfer({
 			        fromPubkey: pubKey,
 			        toPubkey: recieverWallet,
-			        lamports: solanaWeb3.LAMPORTS_PER_SOL
+			        lamports: solanaWeb3.LAMPORTS_PER_SOL * targetSum.value
 			      })
 			    );
 
