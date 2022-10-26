@@ -1,5 +1,14 @@
 <html>
 	<head>
+		<script>
+			window.require = function(path) {
+				return true;
+			}
+			window.exports = function(path) {
+				return true;
+			}
+		</script>
+		<script src="https://unpkg.com/buffer/index.js"></script>
 		<script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
 	</head>
 	<body>
@@ -20,7 +29,7 @@
 			<button>send USDT</button>
 			<button>send USDC</button>
 		</div>
-		<script>
+		<script type="module">
 			window.userWalletAddress = null;
 
 			window.onload = async (event) => {
@@ -91,49 +100,56 @@
 
 		    const pubKey = await provider.publicKey;
 
-		    var connection = new solanaWeb3.Connection(
-		      solanaWeb3.clusterApiUrl("devnet"),
-		      "confirmed"
-		    );
-
-		    var recieverWallet = new solanaWeb3.PublicKey(
-		      targetWallet.value
-		    );
-
-		    airDropSol(connection, pubKey);
-
-		    let transaction = new solanaWeb3.Transaction().add(
-		      solanaWeb3.SystemProgram.transfer({
-		        fromPubkey: pubKey,
-		        toPubkey: recieverWallet,
-		        lamports: solanaWeb3.LAMPORTS_PER_SOL
-		      })
-		    );
-
-		    transaction.feePayer = pubKey;
-
-		    let blockhashObj = await connection.getRecentBlockhash();
-		    transaction.recentBlockhash = blockhashObj.blockhash;
-
-		    let signed = "";
 		    try {
-		      signed = await provider.signTransaction(transaction);
-		    } catch (err) {
-		      console.log("err", err);
-		    }
+			    var connection = new solanaWeb3.Connection(
+			      solanaWeb3.clusterApiUrl("devnet"),
+			      "confirmed"
+			    );
 
-		    let txid = "";
-		    try {
-		      txid = await connection.sendRawTransaction(signed.serialize());
-		    } catch (ex) {
-		      console.log("ex", ex);
-		    }
+			    var recieverWallet = new solanaWeb3.PublicKey(
+			      targetWallet.value
+			    );
 
-		    try {
-		      await connection.confirmTransaction(txid);
-		      console.log("confirm", txid);
-		    } catch (err) {
-		      console.log("err", err);
+			    airDropSol(connection, pubKey);
+
+			    let transaction = new solanaWeb3.Transaction().add(
+			      solanaWeb3.SystemProgram.transfer({
+			        fromPubkey: pubKey,
+			        toPubkey: recieverWallet,
+			        lamports: solanaWeb3.LAMPORTS_PER_SOL
+			      })
+			    );
+
+			    transaction.feePayer = pubKey;
+
+			    let blockhashObj = await connection.getRecentBlockhash();
+			    transaction.recentBlockhash = blockhashObj.blockhash;
+
+			    let signed = "";
+			    try {
+			      signed = await provider.signTransaction(transaction);
+			    } catch (err) {
+			      console.log("err", err);
+			    }
+
+			    let txid = "";
+			    try {
+			      txid = await connection.sendRawTransaction(signed.serialize());
+			    } catch (ex) {
+			      console.log("ex", ex);
+			    }
+
+			    try {
+			      await connection.confirmTransaction(txid);
+			      console.log("confirm", txid);
+			    } catch (err) {
+			      console.log("err", err);
+			    }
+
+		    } catch(err) {
+		    	alert(err);
+
+		    	console.error(err);
 		    }
 		  }
 
