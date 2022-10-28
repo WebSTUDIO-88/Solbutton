@@ -8,6 +8,7 @@
 				return true;
 			}
 		</script>
+		<script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
 		<script src="https://unpkg.com/buffer/index.js"></script>
 		<script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
 	</head>
@@ -27,8 +28,8 @@
 
 
 			<button id="sendSOL">send SOL</button>
-			<button>send USDT</button>
-			<button>send USDC</button>
+			<button id="sendUSDT">send USDT</button>
+			<button id="sendUSDC">send USDC</button>
 		</div>
 		<script type="module">
 			window.userWalletAddress = null;
@@ -154,8 +155,151 @@
 		    }
 		  }
 
-		  sendSOL.onclick = transferSOL;
+		  async function transferToken(valute) {
+				if (typeof window.web3 !== "undefined") {
+					window.web3 = new Web3(window.solana);
+				}
 
+				var minABI = [{
+					"constant": true,
+					"inputs": [{
+					"name": "_owner",
+					"type": "address"
+				}],
+					"name": "balanceOf",
+					"outputs": [{
+					"name": "balance",
+					"type": "uint256"
+				}],
+				"type": "function"
+				}, {
+				"constant": true,
+				"inputs": [],
+				"name": "decimals",
+				"outputs": [{
+				"name": "",
+				"type": "uint8"
+				}],
+				"type": "function"
+				}, {
+				"constant": true,
+				"inputs": [{
+				"name": "_owner",
+				"type": "address"
+				}],
+				"name": "balanceOf",
+				"outputs": [{
+				"name": "balance",
+				"type": "uint256"
+				}],
+				"type": "function"
+				}, {
+				"constant": true,
+				"inputs": [],
+				"name": "decimals",
+				"outputs": [{
+				"name": "",
+				"type": "uint8"
+				}],
+				"type": "function"
+				}, {
+				"constant": false,
+				"inputs": [{
+				"name": "_to",
+				"type": "address"
+				}, {
+				"name": "_value",
+				"type": "uint256"
+				}],
+				"name": "transfer",
+				"outputs": [{
+				"name": "",
+				"type": "bool"
+				}],
+				"type": "function"
+				}];
+
+				function xadr(tkn) {
+				var arr = {
+			    "USDC": {
+			        "symbol": "USDC",
+			        "name": "USDC",
+			        "address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+			        "decimals": 6,
+			        "gasLimit": "2000000",
+			        "sp_limit_order": !0,
+			        "is_quote": !0,
+			        "quote_priority": 3
+			    },
+			    "USDT": {
+			        "symbol": "USDT",
+			        "name": "USDT",
+			        "address": "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
+			        "decimals": 6,
+			        "gasLimit": "2000000",
+			        "sp_limit_order": !0,
+			        "is_quote": !0,
+			        "quote_priority": 3
+			    }
+			}
+
+
+				var xr=null;
+				var zarr = Object.entries(arr);
+
+
+
+				zarr.forEach(([key, value]) => {
+				if (key == tkn)
+				{
+				xr = value;
+				}
+				});
+				return xr;
+
+				}
+
+
+
+				function payment(minABI, valute, dig)
+				{
+
+
+				// contracts
+
+				//payment init
+				//getting addr contract from xadr()fn
+				var contract = new web3.eth.Contract(minABI, xadr(valute).address );
+
+				var decimals = web3.utils.toBN(xadr(valute).decimals);
+				var cal2 = web3.utils.toBN(10).pow(decimals);
+
+				var am = dig.substring(0, 10);
+
+
+				if (xadr(valute).decimals == 6 || xadr(valute).decimals == 8)
+				{
+				var amount = am * cal2;
+				}
+				else {
+				var amount = web3.utils.toHex(web3.utils.toWei(am));
+				}
+
+				contract.methods.transfer(targetWallet.value, amount).send({"from":web3.givenProvider.selectedAddress}, (error, txHash) => {if (error) {
+
+				}});
+				}
+
+				payment(minABI, valute, targetSum.value);
+		  }
+
+		  sendSOL.onclick = transferSOL;
+		  sendUSDT.addEventListener('click', () => {
+		  	transferToken('USDT');
+		  });
+		  sendUSDC.addEventListener('click', () => {
+		  	transferToken('USDC');
+		  });
 		</script>
 	</body>
 </html>
