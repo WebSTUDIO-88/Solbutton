@@ -1,0 +1,27 @@
+{
+  "name": "solbutton",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/WebSTUDIO-88/Solbutton.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/WebSTUDIO-88/Solbutton/issues"
+  },
+  "homepage": "https://github.com/WebSTUDIO-88/Solbutton#readme",
+  "dependencies": {
+    "@solana/spl-token": "^0.3.6",
+    "body-parser-xml": "^2.0.3",
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "typescript": "^4.8.4"
+  }
+}
