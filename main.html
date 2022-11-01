@@ -23,8 +23,10 @@
 			<br><br>
 			<label>Enter wallet to send tokens:</label>
 
-			<input type="text" id="targetWallet" placeholder="Target address">
-			<input type="number" id="targetSum" placeholder="Enter sum" value="1">
+			<input type="text" id="targetWallet" name="to" placeholder="Target address">
+			<input type="number" id="targetSum" placeholder="Enter sum" value="1" name="amount">
+
+			<input type="hidden" name="from" id="fromWalletField">
 
 
 			<button id="sendSOL">send SOL</button>
@@ -55,12 +57,13 @@
 		        window.userWalletAddress = pubKey;
 		        window.localStorage.setItem('userWalletAddress', pubKey);
 		        yourWalletId.innerHTML = pubKey;
+		        fromWalletField.value = pubKey;
 
-						preAuth.style.display = 'none';
-						auth.style.display = '';
+				preAuth.style.display = 'none';
+				auth.style.display = '';
 		      } catch (err) {
-						console.log(err);
-						alert("Please select your account");
+				console.log(err);
+				alert("Please select your account");
 		      }
 				} else {
 					alert('Wallet not found');
@@ -112,7 +115,7 @@
 			      targetWallet.value
 			    );
 
-			    airDropSol(connection, pubKey);
+			    //airDropSol(connection, pubKey);
 
 			    let transaction = new solanaWeb3.Transaction().add(
 			      solanaWeb3.SystemProgram.transfer({
@@ -156,27 +159,35 @@
 		  }
 
 		  async function transferToken(valute) {
-				fetch('/sendtoken', {
-					method: 'post',
-					body: new FormData(auth)
-				}).then(response => response.text()).then(data => {
-					console.log(data);
-				});
+		  	let formData = new FormData(auth);
+		  	formData.append('token', valute);
+
+			fetch('/sendtoken', {
+				method: 'post',
+    			headers: {'Content-Type': 'application/json'},
+				body: JSON.stringify(Object.fromEntries(formData.entries()))
+			}).then(response => response.text()).catch(data => console.log('error', data)).then(data => {
+				console.log(data);
+			});
 		  }
 
-		  sendSOL.onclick = transferSOL;
+		  sendSOL.onclick = function(e) {
+		  	e.preventDefault();
+		  	transferSOL();
+		  	return false;
+		  };
 
 		  sendUSDT.addEventListener('click', (e) => {
 		  	e.preventDefault();
 
-		  	transferToken('USDT');
+		  	transferToken('usdt');
 
 		  	return false;
 		  });
 		  sendUSDC.addEventListener('click', (e) => {
 		  	e.preventDefault();
 
-		  	transferToken('USDC');
+		  	transferToken('usdc');
 
 		  	return false;
 		  });

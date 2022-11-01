@@ -1,9 +1,8 @@
 const solanaWeb3 = require('@solana/web3.js');
-const sptToken = require('@solana/spl-token');
+const splToken = require('@solana/spl-token');
+
 const express = require('express');
-var bodyParser = require('body-parser');
-var app = express();
-require('body-parser-xml')(bodyParser);
+const app = express();
 
 async function sendToken (fromWalletAddress, toWalletAddress, amount, token) {
     // Connect to cluster
@@ -11,70 +10,84 @@ async function sendToken (fromWalletAddress, toWalletAddress, amount, token) {
 
     // Generate a new wallet keypair and airdrop SOL
     const fromWallet = solanaWeb3.Keypair.generate();
-    const fromAirdropSignature = await connection.requestAirdrop(fromWallet.publicKey, solanaWeb3.LAMPORTS_PER_SOL);
-
-    // Wait for airdrop confirmation
-    await connection.confirmTransaction(fromAirdropSignature);
 
     // Generate a new wallet to receive newly minted token
     const toWallet = solanaWeb3.Keypair.generate();
 
-    // Create new token mint
-    const mint = await solanaWeb3.createMint(connection, fromWallet, fromWallet.publicKey, null, 9);
+    const tokenVariants = {
+      usdt: {
+        mint: 'Q6XprfkF8RQQKoQVG33xT88H7wi8Uk1B1CC7YAs69Gi',
+        freeze: 'Q6XprfkF8RQQKoQVG33xT88H7wi8Uk1B1CC7YAs69Gi',
+      },
+      usdc: {
+        mint: '2wmVCSfPxGPjrnMMn7rchp4uaeoTqN39mXFC2zhPdri9',
+        freeze: '3sNBr7kMccME5D55xNgsmYpZnzPgP2g12CixAajXypn6'
+      }
+    }
 
-    // Get the token account of the fromWallet address, and if it does not exist, create it
-    const fromTokenAccount = await getOrCreateAssociatedTokenAccount(
+    const selectedToken = tokenVariants[token];
+
+    console.log(tokenVariants, selectedToken, token);
+
+    try {
+      const mint = await splToken.createMint(
         connection,
         fromWallet,
-        mint,
-        fromWallet.publicKey
-    );
+        new solanaWeb3.PublicKey(selectedToken.mint), 
+        new solanaWeb3.PublicKey(selectedToken.freeze),
+        6,
+        solanaWeb3.Keypair.generate(),
+        []
+      );
 
-    // Get the token account of the toWallet address, and if it does not exist, create it
-    const toTokenAccount = await getOrCreateAssociatedTokenAccount(connection, fromWallet, mint, toWallet.publicKey);
+      const fromTokenAccount = await splToken.getOrCreateAssociatedTokenAccount(
+          connection,
+          fromWallet,
+          mint,
+          fromWallet.publicKey
+      );
 
-    // Mint 1 new token to the "fromTokenAccount" account we just created
-    let signature = await mintTo(
-        connection,
-        fromWallet,
-        mint,
-        fromTokenAccount.address,
-        fromWallet.publicKey,
-        1000000000
-    );
-    console.log('mint tx:', signature);
+      const toTokenAccount = await splToken.getOrCreateAssociatedTokenAccount(connection, fromWallet, mint, toWallet.publicKey);
 
-    // Transfer the new token to the "toTokenAccount" we just created
-    signature = await transfer(
-        connection,
-        fromWallet,
-        fromTokenAccount.address,
-        toTokenAccount.address,
-        fromWallet.publicKey,
-        50
-    );
+      /*let signature = await splToken.mintTo(
+          connection,
+          fromWallet,
+          mint,
+          fromTokenAccount.address,
+          fromWallet.publicKey,
+          amount * solanaWeb3.LAMPORTS_PER_SOL
+      );
+      console.log('mint tx:', signature);*/
+
+      let signature = await splToken.transfer(
+          connection,
+          fromWallet,
+          fromTokenAccount.address,
+          toTokenAccount.address,
+          fromWallet.publicKey,
+          amount * solanaWeb3.LAMPORTS_PER_SOL
+      );
+    } catch(e) {
+      console.log(e);
+      return JSON.stringify({'status': 'fail', 'error': e.message});
+    }
+
+    return JSON.stringify({'status': 'ok'});
 }
-
-var app = express();
-
-app.use(bodyParser.xml({
-  limit: '1MB',
-  XmlParseOptions: {
-    normalize: true,
-    normalizeTags: true,
-    explicitArray: false
-  }
-}));
 
 app.get('/', function(req, res) {
   res.sendFile(__dirname + "/" + "main.html");
 });
 
-app.post('/sendtoken', bodyParser.urlencoded({ extended: false }), function(req, res) {
-  console.log(req.body);
+app.use(express.json());
+
+app.post('/sendtoken', (req, res) => {
   var body = req.body;
 
-  sendToken(body.from, body.to, body.amount, body.token);
+  sendToken(body.from, body.to, body.amount, body.token).then(
+    (result) => {
+      res.end(result)
+    });
 });
 
 var server = app.listen(8080, function() {

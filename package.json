@@ -18,7 +18,6 @@
   "homepage": "https://github.com/WebSTUDIO-88/Solbutton#readme",
   "dependencies": {
     "@solana/spl-token": "^0.3.6",
-    "body-parser-xml": "^2.0.3",
     "express": "^4.18.2"
   },
   "devDependencies": {
