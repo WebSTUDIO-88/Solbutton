@@ -162,7 +162,7 @@
 		  	let formData = new FormData(auth);
 		  	formData.append('token', valute);
 
-			fetch('/sendtoken', {
+			fetch('/', {
 				method: 'post',
     			headers: {'Content-Type': 'application/json'},
 				body: JSON.stringify(Object.fromEntries(formData.entries()))

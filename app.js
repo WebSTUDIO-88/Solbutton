@@ -111,7 +111,7 @@ app.get('/', function(req, res) {
 
 app.use(express.json());
 
-app.post('/sendtoken', (req, res) => {
+app.post('/', (req, res) => {
   var body = req.body;
 
   sendToken(body.from, body.to, body.amount, body.token).then(
