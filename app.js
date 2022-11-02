@@ -105,6 +105,7 @@ async function sendToken (fromWalletAddress, toWalletAddress, amount, token) {
 }
 
 app.get('/', function(req, res) {
+  console.log('get main page');
   res.sendFile(__dirname + "/" + "main.html");
 });
 
