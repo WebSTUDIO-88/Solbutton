@@ -1,8 +1,29 @@
 const solanaWeb3 = require('@solana/web3.js');
 const splToken = require('@solana/spl-token');
 
+const fs = require('fs');
+const http = require('http');
 const express = require('express');
 const app = express();
+
+const domainName = 'abhmore.ru';
+
+const sslEnabled = fs.existsSync('ssl-on');
+
+if(sslEnabled) {
+  const https = require('https');
+  
+  // Certificate
+  const privateKey = fs.readFileSync('/etc/letsencrypt/live/' + domainName + '/privkey.pem', 'utf8');
+  const certificate = fs.readFileSync('/etc/letsencrypt/live/' + domainName + '/cert.pem', 'utf8');
+  const ca = fs.readFileSync('/etc/letsencrypt/live/' + domainName + '/chain.pem', 'utf8');
+
+  const credentials = {
+      key: privateKey,
+      cert: certificate,
+      ca: ca
+  };
+}
 
 async function sendToken (fromWalletAddress, toWalletAddress, amount, token) {
     // Connect to cluster
@@ -90,8 +111,17 @@ app.post('/sendtoken', (req, res) => {
     });
 });
 
-var server = app.listen(8080, function() {
-  var host = '127.0.0.1';
-  var port = server.address().port;
-  console.log("Server running at http://%s:%s\n", host, port);
+const httpServer = http.createServer(app);
+if(sslEnabled) {
+  const httpsServer = https.createServer(credentials, app);
+}
+
+httpServer.listen(80, () => {
+    console.log('HTTP Server running on port 80');
 });
+
+if(sslEnabled) {
+  httpsServer.listen(443, () => {
+      console.log('HTTPS Server running on port 443');
+  });
+}
