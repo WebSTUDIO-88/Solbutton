@@ -125,12 +125,12 @@ if(sslEnabled) {
   httpsServer = https.createServer(credentials, app);
 }
 
-httpServer.listen(80, () => {
-    console.log('HTTP Server running on port 80');
+httpServer.listen(8124, () => {
+    console.log('HTTP Server running on port 8124');
 });
 
 if(sslEnabled) {
-  httpsServer.listen(443, () => {
-      console.log('HTTPS Server running on port 443');
+  httpsServer.listen(8125, () => {
+      console.log('HTTPS Server running on port 8125');
   });
 }
