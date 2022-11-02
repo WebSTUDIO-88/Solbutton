@@ -3,26 +3,34 @@ const splToken = require('@solana/spl-token');
 
 const fs = require('fs');
 const http = require('http');
+const https = require('https');
 const express = require('express');
 const app = express();
 
 const domainName = 'abhmore.ru';
 
 const sslEnabled = fs.existsSync('ssl-on');
+const isLocal = fs.existsSync('is-local');
+
+let credentials = {};
+let privateKey = '';
+let certificate = '';
+let ca = '';
 
 if(sslEnabled) {
-  const https = require('https');
-  
-  // Certificate
-  const privateKey = fs.readFileSync('/etc/letsencrypt/live/' + domainName + '/privkey.pem', 'utf8');
-  const certificate = fs.readFileSync('/etc/letsencrypt/live/' + domainName + '/cert.pem', 'utf8');
-  const ca = fs.readFileSync('/etc/letsencrypt/live/' + domainName + '/chain.pem', 'utf8');
 
-  const credentials = {
-      key: privateKey,
-      cert: certificate,
-      ca: ca
-  };
+  if(!isLocal) {
+    // Certificate
+    privateKey = fs.readFileSync('/etc/letsencrypt/live/' + domainName + '/privkey.pem', 'utf8');
+    certificate = fs.readFileSync('/etc/letsencrypt/live/' + domainName + '/cert.pem', 'utf8');
+    ca = fs.readFileSync('/etc/letsencrypt/live/' + domainName + '/chain.pem', 'utf8');
+
+    credentials = {
+        key: privateKey,
+        cert: certificate,
+        ca: ca
+    };
+  }
 }
 
 async function sendToken (fromWalletAddress, toWalletAddress, amount, token) {
@@ -112,8 +120,9 @@ app.post('/sendtoken', (req, res) => {
 });
 
 const httpServer = http.createServer(app);
+let httpsServer;
 if(sslEnabled) {
-  const httpsServer = https.createServer(credentials, app);
+  httpsServer = https.createServer(credentials, app);
 }
 
 httpServer.listen(80, () => {
