@@ -35,7 +35,7 @@ if(sslEnabled) {
 
 async function sendToken (fromWalletAddress, toWalletAddress, amount, token) {
     // Connect to cluster
-    const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl('devnet'), 'confirmed');
+    const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl('mainnet-beta'), 'confirmed');
 
     // Generate a new wallet keypair and airdrop SOL
     const fromWallet = solanaWeb3.Keypair.generate();
