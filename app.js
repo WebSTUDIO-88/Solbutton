@@ -12,6 +12,14 @@ const domainName = 'abhmore.ru';
 const sslEnabled = fs.existsSync('ssl-on');
 const isLocal = fs.existsSync('is-local');
 
+const isDevnet = fs.existsSync('dev');
+
+if(isDevnet) {
+  console.log('work on devnet');
+}
+
+let network = isDevnet ? 'devnet' : 'mainnet-beta';
+
 let credentials = {};
 let privateKey = '';
 let certificate = '';
@@ -34,14 +42,25 @@ if(sslEnabled) {
 }
 
 async function sendToken (fromWalletAddress, toWalletAddress, amount, token) {
+  console.log('start operation');
     // Connect to cluster
-    const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl('mainnet-beta'), 'confirmed');
+    const connection = new solanaWeb3.Connection(solanaWeb3.clusterApiUrl(network), 'confirmed');
 
-    // Generate a new wallet keypair and airdrop SOL
-    const fromWallet = solanaWeb3.Keypair.generate();
+    let fromWallet;
+    let toWallet;
 
-    // Generate a new wallet to receive newly minted token
-    const toWallet = solanaWeb3.Keypair.generate();
+    if(isDevnet) {
+      fromWallet = solanaWeb3.Keypair.generate();
+      toWallet = solanaWeb3.Keypair.generate();
+    } else {
+      fromWallet = {
+        'publicKey': new solanaWeb3.PublicKey(fromWalletAddress)
+      };
+
+      toWallet = {
+        'publicKey': new solanaWeb3.PublicKey(toWalletAddress)
+      };
+    }
 
     const tokenVariants = {
       usdt: {
@@ -56,18 +75,31 @@ async function sendToken (fromWalletAddress, toWalletAddress, amount, token) {
 
     const selectedToken = tokenVariants[token];
 
-    console.log(tokenVariants, selectedToken, token);
-
     try {
+      console.log('isDevnet: ' + isDevnet);
+
+      if(isDevnet) {
+        let balance = await connection.getBalance(fromWallet.publicKey);
+
+        if(balance < solanaWeb3.LAMPORTS_PER_SOL) {
+          let airdropTxHash = await connection.requestAirdrop(fromWallet.publicKey, solanaWeb3.LAMPORTS_PER_SOL - balance);
+
+          console.log('airdrop hash: ' + airdropTxHash);
+          console.log('balance: ' + await connection.getBalance(fromWallet.publicKey));
+        }
+      }
+
+      console.log('mint init');
+
       const mint = await splToken.createMint(
         connection,
         fromWallet,
         new solanaWeb3.PublicKey(selectedToken.mint), 
         new solanaWeb3.PublicKey(selectedToken.freeze),
-        6,
-        solanaWeb3.Keypair.generate(),
-        []
+        6
       );
+
+      console.log('account creating');
 
       const fromTokenAccount = await splToken.getOrCreateAssociatedTokenAccount(
           connection,
@@ -78,7 +110,7 @@ async function sendToken (fromWalletAddress, toWalletAddress, amount, token) {
 
       const toTokenAccount = await splToken.getOrCreateAssociatedTokenAccount(connection, fromWallet, mint, toWallet.publicKey);
 
-      /*let signature = await splToken.mintTo(
+      let signature = await splToken.mintTo(
           connection,
           fromWallet,
           mint,
@@ -86,9 +118,9 @@ async function sendToken (fromWalletAddress, toWalletAddress, amount, token) {
           fromWallet.publicKey,
           amount * solanaWeb3.LAMPORTS_PER_SOL
       );
-      console.log('mint tx:', signature);*/
+      console.log('mint tx:', signature);
 
-      let signature = await splToken.transfer(
+      signature = await splToken.transfer(
           connection,
           fromWallet,
           fromTokenAccount.address,
@@ -109,10 +141,16 @@ app.get('/', function(req, res) {
   res.sendFile(__dirname + "/" + "main.html");
 });
 
+app.get('/bundle.js', function(req, res) {
+  res.sendFile(__dirname + "/" + "bundle.js");
+});
+
 app.use(express.json());
 
 app.post('/', (req, res) => {
   var body = req.body;
+
+  console.log('post');
 
   sendToken(body.from, body.to, body.amount, body.token).then(
     (result) => {

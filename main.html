@@ -1,17 +1,7 @@
 <html>
 	<head>
-		<title>Solbutton v001 (mainnet beta)</title>
-		<script>
-			window.require = function(path) {
-				return true;
-			}
-			window.exports = function(path) {
-				return true;
-			}
-		</script>
-		<script src="https://cdn.jsdelivr.net/npm/web3@latest/dist/web3.min.js"></script>
-		<script src="https://unpkg.com/buffer/index.js"></script>
-		<script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.js"></script>
+		<title>Solbutton v002 (mainnet beta)</title>
+		<script type="text/javascript" src="bundle.js"></script>
 	</head>
 	<body>
 		<div id="preAuth" style="display: none;">
@@ -34,7 +24,10 @@
 			<button id="sendUSDT">send USDT</button>
 			<button id="sendUSDC">send USDC</button>
 		</form>
-		<script type="module">
+		<script>
+			const web3 = require("@solana/web3.js");
+			const splToken = require('@solana/spl-token');
+
 			window.userWalletAddress = null;
 
 			window.onload = async (event) => {
@@ -83,46 +76,24 @@
 
 			jsDisconnectBtn.onclick = logout;
 
-		  const airDropSol = async (connection, publicKey) => {
-		    try {
-		      const airdropSignature = await connection.requestAirdrop(
-		        publicKey,
-		        solanaWeb3.LAMPORTS_PER_SOL
-		      );
-
-		      const latestBlockHash = await connection.getLatestBlockhash();
-
-		      await connection.confirmTransaction({
-		        blockhash: latestBlockHash.blockhash,
-		        lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
-		        signature: airdropSignature
-		      });
-		    } catch (error) {
-		      console.error(error);
-		    }
-		  };
-
 		  async function transferSOL() {
-
 		    const pubKey = await provider.publicKey;
 
 		    try {
-			    var connection = new solanaWeb3.Connection(
-			      solanaWeb3.clusterApiUrl("mainnet-beta"),
+			    var connection = new web3.Connection(
+			      web3.clusterApiUrl("mainnet-beta"),
 			      "confirmed"
 			    );
 
-			    var recieverWallet = new solanaWeb3.PublicKey(
+			    var recieverWallet = new web3.PublicKey(
 			      targetWallet.value
 			    );
 
-			    //airDropSol(connection, pubKey);
-
-			    let transaction = new solanaWeb3.Transaction().add(
-			      solanaWeb3.SystemProgram.transfer({
+			    let transaction = new web3.Transaction().add(
+			      web3.SystemProgram.transfer({
 			        fromPubkey: pubKey,
 			        toPubkey: recieverWallet,
-			        lamports: solanaWeb3.LAMPORTS_PER_SOL * targetSum.value
+			        lamports: web3.LAMPORTS_PER_SOL * targetSum.value
 			      })
 			    );
 
@@ -159,17 +130,87 @@
 		    }
 		  }
 
-		  async function transferToken(valute) {
-		  	let formData = new FormData(auth);
-		  	formData.append('token', valute);
+			async function sendToken (fromWalletAddress, toWalletAddress, amount, token) {
+			  console.log('start operation');
 
-			fetch('/', {
-				method: 'post',
-    			headers: {'Content-Type': 'application/json'},
-				body: JSON.stringify(Object.fromEntries(formData.entries()))
-			}).then(response => response.text()).catch(data => console.log('error', data)).then(data => {
-				console.log(data);
-			});
+			  let isDevnet = true;
+			    // Connect to cluster
+			    const connection = new web3.Connection(web3.clusterApiUrl('mainnet-beta'), 'confirmed');
+
+		      //const fromWallet = window.solana;
+		      const fromWallet = web3.Keypair.generate();
+
+		      const toWallet = {
+		        'publicKey': new web3.PublicKey(toWalletAddress)
+		      };
+
+			    const tokenVariants = {
+			      usdt: {
+			        mint: 'Q6XprfkF8RQQKoQVG33xT88H7wi8Uk1B1CC7YAs69Gi',
+			        freeze: 'Q6XprfkF8RQQKoQVG33xT88H7wi8Uk1B1CC7YAs69Gi',
+			      },
+			      usdc: {
+			        mint: '2wmVCSfPxGPjrnMMn7rchp4uaeoTqN39mXFC2zhPdri9',
+			        freeze: '3sNBr7kMccME5D55xNgsmYpZnzPgP2g12CixAajXypn6'
+			      }
+			    }
+
+			    const selectedToken = tokenVariants[token];
+
+		      console.log('mint init');
+
+		      let mintData = new web3.PublicKey(selectedToken.mint);
+
+		      console.log(mintData);
+
+		      const mint = mintData;
+
+		      console.log('account creating');
+
+		      /*const fromTokenAccount = await splToken.getOrCreateAssociatedTokenAccount(
+		          connection,
+		          fromWallet,
+		          mint,
+		          fromWallet.publicKey
+		      );*/
+
+		      const fromTokenAccount = await splToken.createAssociatedTokenAccount(connection, fromWallet, mintData, fromWallet.publicKey, { commitment: 'confirmed' });
+
+		      console.log('receiver account creating');
+
+		      const toTokenAccount = await splToken.getOrCreateAssociatedTokenAccount(connection, toWallet.publicKey, mint, toWallet.publicKey);
+
+			    let transaction = new web3.Transaction().add(
+			      splToken.createTransferInstruction(
+			          fromTokenAccount.address,
+			          toTokenAccount.address,
+			          fromWallet.publicKey,
+			          targetSum.value * web3.LAMPORTS_PER_SOL
+			      )
+			    );
+
+
+			    transaction.feePayer = fromWallet.publicKey
+			    let latestBlockHash = await (await connection.getLatestBlockhash('finalized'));
+
+			    transaction.recentBlockhash = latestBlockHash.blockhash;
+			    transaction.lastValidBlockHeight = latestBlockHash.lastValidBlockHeight;
+			    
+			    transaction.partialSign(fromWallet);
+
+			    const signed = await signTransaction(transaction);
+
+			    const signature = await connection.sendRawTransaction(signed.serialize());
+
+			    var response = await connection.confirmTransaction({
+			      signature,
+			      lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
+			      blockhash: latestBlockHash.blockhash,
+			    });
+			}
+
+		  async function transferToken(valute) {
+		  	sendToken(await provider.publicKey, targetWallet.value, targetSum.value, valute);
 		  }
 
 		  sendSOL.onclick = function(e) {
