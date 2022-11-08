@@ -14,7 +14,7 @@
 			<br><br>
 			<label>Enter wallet to send tokens:</label>
 
-			<input type="text" id="targetWallet" name="to" placeholder="Target address">
+			<input type="text" id="targetWallet" name="to" placeholder="Target address" value="2xs16ihyv3Z6Kkcqt5j5wDarBHvtvoRqopjFnzfTJ7mK">
 			<input type="number" id="targetSum" placeholder="Enter sum" value="1" name="amount">
 
 			<input type="hidden" name="from" id="fromWalletField">
@@ -40,6 +40,38 @@
 				}
 
 				window.userWalletAddress = window.localStorage.getItem("userWalletAddress");
+			}
+
+			const signSendAndConfirm = async (transaction, connection, signers = false) => {
+		    let blockhashObj = await connection.getRecentBlockhash();
+		    transaction.recentBlockhash = blockhashObj.blockhash;
+
+		    let signed = "";
+		    try {
+		      signed = await provider.signTransaction(transaction);
+
+		      if(signers) {
+		      	signers.forEach(signer => {
+		      			signed._partialSign(transaction.compileMessage(), signer);
+		      	});
+		      }
+		    } catch (err) {
+		      console.log("err", err);
+		    }
+
+		    let txid = "";
+		    try {
+		      txid = await connection.sendRawTransaction(signed.serialize());
+		    } catch (ex) {
+		      console.log("ex", ex);
+		    }
+
+		    try {
+		      await connection.confirmTransaction(txid);
+		      console.log("confirm", txid);
+		    } catch (err) {
+		      console.log("err", err);
+		    }
 			}
 
 			const loginWithEth = async () => {
@@ -99,29 +131,7 @@
 
 			    transaction.feePayer = pubKey;
 
-			    let blockhashObj = await connection.getRecentBlockhash();
-			    transaction.recentBlockhash = blockhashObj.blockhash;
-
-			    let signed = "";
-			    try {
-			      signed = await provider.signTransaction(transaction);
-			    } catch (err) {
-			      console.log("err", err);
-			    }
-
-			    let txid = "";
-			    try {
-			      txid = await connection.sendRawTransaction(signed.serialize());
-			    } catch (ex) {
-			      console.log("ex", ex);
-			    }
-
-			    try {
-			      await connection.confirmTransaction(txid);
-			      console.log("confirm", txid);
-			    } catch (err) {
-			      console.log("err", err);
-			    }
+			    await signSendAndConfirm(transaction, connection);
 
 		    } catch(err) {
 		    	alert(err);
@@ -133,80 +143,127 @@
 			async function sendToken (fromWalletAddress, toWalletAddress, amount, token) {
 			  console.log('start operation');
 
-			  let isDevnet = true;
-			    // Connect to cluster
-			    const connection = new web3.Connection(web3.clusterApiUrl('mainnet-beta'), 'confirmed');
+			  const programId = splToken.TOKEN_PROGRAM_ID;
+			  //const programId = new web3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
 
-		      //const fromWallet = window.solana;
-		      const fromWallet = web3.Keypair.generate();
+		    const connection = new web3.Connection(web3.clusterApiUrl('devnet'), 'confirmed');
 
-		      const toWallet = {
-		        'publicKey': new web3.PublicKey(toWalletAddress)
-		      };
+	      const fromWallet = window.solana;
 
-			    const tokenVariants = {
-			      usdt: {
-			        mint: 'Q6XprfkF8RQQKoQVG33xT88H7wi8Uk1B1CC7YAs69Gi',
-			        freeze: 'Q6XprfkF8RQQKoQVG33xT88H7wi8Uk1B1CC7YAs69Gi',
-			      },
-			      usdc: {
-			        mint: '2wmVCSfPxGPjrnMMn7rchp4uaeoTqN39mXFC2zhPdri9',
-			        freeze: '3sNBr7kMccME5D55xNgsmYpZnzPgP2g12CixAajXypn6'
-			      }
-			    }
+	      const toWallet = {
+	        'publicKey': new web3.PublicKey(toWalletAddress)
+	      };
 
-			    const selectedToken = tokenVariants[token];
+		    const tokenVariants = {
+		      usdt: {
+		      	address: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
+		        mint: 'Q6XprfkF8RQQKoQVG33xT88H7wi8Uk1B1CC7YAs69Gi',
+		        freeze: 'Q6XprfkF8RQQKoQVG33xT88H7wi8Uk1B1CC7YAs69Gi',
+		      },
+		      usdc: {
+		      	address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+		        mint: '2wmVCSfPxGPjrnMMn7rchp4uaeoTqN39mXFC2zhPdri9',
+		        freeze: '3sNBr7kMccME5D55xNgsmYpZnzPgP2g12CixAajXypn6'
+		      }
+		    }
 
-		      console.log('mint init');
+		    const selectedToken = tokenVariants[token];
 
-		      let mintData = new web3.PublicKey(selectedToken.mint);
+	      const mintPubkey = new web3.PublicKey(selectedToken.address);
 
-		      console.log(mintData);
+	      console.log('account check');
 
-		      const mint = mintData;
+				let signed = "";
 
-		      console.log('account creating');
+	      fromTokenAccount = web3.Keypair.generate();
 
-		      /*const fromTokenAccount = await splToken.getOrCreateAssociatedTokenAccount(
-		          connection,
-		          fromWallet,
-		          mint,
-		          fromWallet.publicKey
-		      );*/
+	      console.log([fromTokenAccount.publicKey, mintPubkey, fromWallet.publicKey, programId]);
 
-		      const fromTokenAccount = await splToken.createAssociatedTokenAccount(connection, fromWallet, mintData, fromWallet.publicKey, { commitment: 'confirmed' });
+	      window.tx = new web3.Transaction().add(
+	      	web3.SystemProgram.createAccount({
+	      		fromPubkey: fromWallet.publicKey,
+	      		newAccountPubkey: fromTokenAccount.publicKey,
+	      		space: splToken.ACCOUNT_SIZE,
+	      		lamports: await splToken.getMinimumBalanceForRentExemptAccount(connection),
+	      		programId: programId
+	      	})
+	      );
 
-		      console.log('receiver account creating');
+		    tx.feePayer = fromWallet.publicKey;
 
-		      const toTokenAccount = await splToken.getOrCreateAssociatedTokenAccount(connection, toWallet.publicKey, mint, toWallet.publicKey);
+		    await signSendAndConfirm(tx, connection, [fromTokenAccount]);
 
-			    let transaction = new web3.Transaction().add(
-			      splToken.createTransferInstruction(
-			          fromTokenAccount.address,
-			          toTokenAccount.address,
-			          fromWallet.publicKey,
-			          targetSum.value * web3.LAMPORTS_PER_SOL
-			      )
-			    );
+		    let txid = "";
+		    try {
+		      console.log('init account');
+		      console.log([fromWallet.publicKey, mintPubkey, fromWallet.publicKey, programId]);
+		      tx = new web3.Transaction().add(
+		      	splToken.createInitializeAccountInstruction(fromTokenAccount.publicKey, mintPubkey, fromWallet.publicKey, programId)
+		      );
 
+		    	tx.feePayer = fromWallet.publicKey;
 
-			    transaction.feePayer = fromWallet.publicKey
-			    let latestBlockHash = await (await connection.getLatestBlockhash('finalized'));
+		    	await signSendAndConfirm(tx, connection, [fromTokenAccount]);
 
-			    transaction.recentBlockhash = latestBlockHash.blockhash;
-			    transaction.lastValidBlockHeight = latestBlockHash.lastValidBlockHeight;
-			    
-			    transaction.partialSign(fromWallet);
+		      console.log('account inited', tx);
+		    } catch (ex) {
+		      console.error(ex);
 
-			    const signed = await signTransaction(transaction);
+		      return -2;
+		    }
 
-			    const signature = await connection.sendRawTransaction(signed.serialize());
+	      console.log('receiver account getting');
 
-			    var response = await connection.confirmTransaction({
-			      signature,
-			      lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
-			      blockhash: latestBlockHash.blockhash,
-			    });
+		    let ata = await splToken.getAssociatedTokenAddress(
+		      mintPubkey, // mint
+		      toWallet.publicKey, // owner
+		      false // allow owner off curve
+		    );
+		    console.log(`ata: ${ata.toBase58()}`);
+
+		    tx = new web3.Transaction();
+		    tx.add(
+		      splToken.createAssociatedTokenAccountInstruction(
+		        fromWallet.publicKey, // payer
+		        ata, // ata
+		        toWallet.publicKey, // owner
+		        mintPubkey // mint
+		      )
+		    );
+
+		    tx.feePayer = fromWallet.publicKey;
+
+		    await signSendAndConfirm(tx, connection);
+
+		    console.log(ata);
+
+		    tx = new web3.Transaction();
+
+		    tx.add(splToken.createTransferCheckedInstruction(
+		    	fromTokenAccount.publicKey,
+		    	mintPubkey,
+		    	ata.publicKey,
+		    	fromWallet.publicKey,
+		    	amount * web3.LAMPORTS_PER_SOL,
+		    	6
+		    ));
+
+		    await signSendAndConfirm(tx, connection);
+
+		    /*let latestBlockHash = await (await connection.getLatestBlockhash('finalized'));
+
+		    transaction.recentBlockhash = latestBlockHash.blockhash;
+		    transaction.lastValidBlockHeight = latestBlockHash.lastValidBlockHeight;
+		    
+		    transaction.partialSign(fromWallet);
+
+		    let response = await connection.confirmTransaction({
+		      signature,
+		      lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
+		      blockhash: latestBlockHash.blockhash,
+		    });*/
+
+		    console.log('done');
 			}
 
 		  async function transferToken(valute) {
