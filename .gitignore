@@ -2,3 +2,5 @@ brave_wallet_pass
 is-local
 ssl-on
 dev
+build/node_modules
+node_modules
