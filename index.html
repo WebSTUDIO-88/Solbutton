@@ -186,6 +186,8 @@
 
 	      console.log('account check');
 
+	      let fromTokenAccount = '';
+
 	      if(!accountSelect.value) {
 		      console.log('get mint', mintPubkey, connection);
 
@@ -229,13 +231,13 @@
 				    if(!txResult) {
 				    	return false;
 				    } else {
-				    	alert('We created account ' + fromTokenAccount.publicKey.toString() + ' for you! Please top up your new account before sending token');
+				    	alert('We created account ' + fromTokenAccount.publicKey.toString() + ' for you! Please top your new account up before sending token');
 				    	return true;
 				    }
 		  		}
 		  	} else {
 		  		fromTokenAccount = {
-		  			publicKey: new web3.publicKey(accountSelect.value)
+		  			publicKey: new web3.PublicKey(accountSelect.value)
 		  		}
 		  	}
 
