@@ -21,6 +21,11 @@
 
 
 			<button id="sendSOL">send SOL</button>
+			<br><br>
+			<div id="accountSelectBox" style="display: none;">
+				<label>Select account (<span id="selectedValuteName"></span>)</label>
+				<select id="accountSelect"></select>
+			</div>
 			<button id="sendUSDT">send USDT</button>
 			<button id="sendUSDC">send USDC</button>
 		</form>
@@ -52,7 +57,11 @@
 
 		      if(signers) {
 		      	signers.forEach(signer => {
-		      			signed._partialSign(transaction.compileMessage(), signer);
+		      		transaction.signatures.forEach(signature => {
+		      			if(signature.publicKey.toString() == signer.publicKey.toString()) {
+		      				signed._partialSign(transaction.compileMessage(), signer);
+		      			}
+		      		})
 		      	});
 		      }
 		    } catch (err) {
@@ -63,7 +72,9 @@
 		    try {
 		      txid = await connection.sendRawTransaction(signed.serialize());
 		    } catch (ex) {
-		      console.log("ex", ex);
+		    	console.log(signed, signers);
+		      console.error(ex);
+		      return false;
 		    }
 
 		    try {
@@ -71,7 +82,10 @@
 		      console.log("confirm", txid);
 		    } catch (err) {
 		      console.log("err", err);
+		      return false;
 		    }
+
+		    return true;
 			}
 
 			const loginWithEth = async () => {
@@ -140,13 +154,12 @@
 		    }
 		  }
 
-			async function sendToken (fromWalletAddress, toWalletAddress, amount, token) {
+			async function sendToken (toWalletAddress, amount, token) {
 			  console.log('start operation');
 
 			  const programId = splToken.TOKEN_PROGRAM_ID;
-			  //const programId = new web3.PublicKey('TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA');
 
-		    const connection = new web3.Connection(web3.clusterApiUrl('devnet'), 'confirmed');
+		    window.connection = new web3.Connection(web3.clusterApiUrl('mainnet-beta'), 'confirmed');
 
 	      const fromWallet = window.solana;
 
@@ -173,44 +186,82 @@
 
 	      console.log('account check');
 
-				let signed = "";
+	      if(!accountSelect.value) {
+		      console.log('get mint', mintPubkey, connection);
 
-	      fromTokenAccount = web3.Keypair.generate();
+		      const mint = await splToken.getMint(connection, mintPubkey);
 
-	      console.log([fromTokenAccount.publicKey, mintPubkey, fromWallet.publicKey, programId]);
+		      let accounts = await connection.getTokenAccountsByOwner(fromWallet.publicKey, {mint: mint.address});
 
-	      window.tx = new web3.Transaction().add(
-	      	web3.SystemProgram.createAccount({
-	      		fromPubkey: fromWallet.publicKey,
-	      		newAccountPubkey: fromTokenAccount.publicKey,
-	      		space: splToken.ACCOUNT_SIZE,
-	      		lamports: await splToken.getMinimumBalanceForRentExemptAccount(connection),
-	      		programId: programId
-	      	})
-	      );
+		      console.log(accounts);
 
-		    tx.feePayer = fromWallet.publicKey;
+		  		if(accounts.value.length) {
+		  			let rawHtml = '';
+		  			accounts.value.forEach(account => {
+		  				let publicKey = account.pubkey;
+		  				rawHtml += '<option value="' + publicKey.toString() + '">' + publicKey.toString() + '</option>'
+		  			});
 
-		    await signSendAndConfirm(tx, connection, [fromTokenAccount]);
+		  			accountSelect.innerHTML = rawHtml;
 
-		    let txid = "";
+		  			accountSelectBox.style.display = '';
+
+
+		  		} else {
+			      fromTokenAccount = web3.Keypair.generate();
+
+			      console.log([fromTokenAccount.publicKey, mintPubkey, fromWallet.publicKey, programId]);
+
+			      window.tx = new web3.Transaction().add(
+			      	web3.SystemProgram.createAccount({
+			      		fromPubkey: fromWallet.publicKey,
+			      		newAccountPubkey: fromTokenAccount.publicKey,
+			      		space: splToken.ACCOUNT_SIZE,
+			      		lamports: await splToken.getMinimumBalanceForRentExemptAccount(connection),
+			      		programId: programId
+			      	})
+			      );
+
+				    tx.feePayer = fromWallet.publicKey;
+
+				    let txResult = await signSendAndConfirm(tx, connection, [fromTokenAccount]);
+
+				    if(!txResult) {
+				    	return false;
+				    } else {
+				    	alert('We created account ' + fromTokenAccount.publicKey.toString() + ' for you! Please top up your new account before sending token');
+				    	return true;
+				    }
+		  		}
+		  	} else {
+		  		fromTokenAccount = {
+		  			publicKey: new web3.publicKey(accountSelect.value)
+		  		}
+		  	}
+
 		    try {
 		      console.log('init account');
-		      console.log([fromWallet.publicKey, mintPubkey, fromWallet.publicKey, programId]);
+		      console.log([fromTokenAccount.publicKey, mintPubkey, fromWallet.publicKey, programId]);
 		      tx = new web3.Transaction().add(
 		      	splToken.createInitializeAccountInstruction(fromTokenAccount.publicKey, mintPubkey, fromWallet.publicKey, programId)
 		      );
 
 		    	tx.feePayer = fromWallet.publicKey;
 
-		    	await signSendAndConfirm(tx, connection, [fromTokenAccount]);
+		    	txResult = await signSendAndConfirm(tx, connection, [fromTokenAccount]);
 
-		      console.log('account inited', tx);
+			    if(!txResult) {
+			    	return false;
+			    }
+
+		      console.log('account inited');
 		    } catch (ex) {
 		      console.error(ex);
 
 		      return -2;
 		    }
+
+		    return false;
 
 	      console.log('receiver account getting');
 
@@ -233,7 +284,11 @@
 
 		    tx.feePayer = fromWallet.publicKey;
 
-		    await signSendAndConfirm(tx, connection);
+		    txResult = await signSendAndConfirm(tx, connection);
+
+		    if(!txResult) {
+		    	return false;
+		    }
 
 		    console.log(ata);
 
@@ -248,26 +303,17 @@
 		    	6
 		    ));
 
-		    await signSendAndConfirm(tx, connection);
+		    txResult = await signSendAndConfirm(tx, connection);
 
-		    /*let latestBlockHash = await (await connection.getLatestBlockhash('finalized'));
-
-		    transaction.recentBlockhash = latestBlockHash.blockhash;
-		    transaction.lastValidBlockHeight = latestBlockHash.lastValidBlockHeight;
-		    
-		    transaction.partialSign(fromWallet);
-
-		    let response = await connection.confirmTransaction({
-		      signature,
-		      lastValidBlockHeight: latestBlockHash.lastValidBlockHeight,
-		      blockhash: latestBlockHash.blockhash,
-		    });*/
+		    if(!txResult) {
+		    	return false;
+		    }
 
 		    console.log('done');
 			}
 
 		  async function transferToken(valute) {
-		  	sendToken(await provider.publicKey, targetWallet.value, targetSum.value, valute);
+		  	sendToken(targetWallet.value, targetSum.value, valute);
 		  }
 
 		  sendSOL.onclick = function(e) {

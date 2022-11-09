@@ -138,7 +138,7 @@ async function sendToken (fromWalletAddress, toWalletAddress, amount, token) {
 
 app.get('/', function(req, res) {
   console.log('get main page');
-  res.sendFile(__dirname + "/" + "main.html");
+  res.sendFile(__dirname + "/" + "index.html");
 });
 
 app.get('/bundle.js', function(req, res) {
