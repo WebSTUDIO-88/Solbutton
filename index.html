@@ -189,13 +189,11 @@
 	      let fromTokenAccount = '';
 
 	      if(!accountSelect.value) {
-		      console.log('get mint', mintPubkey, connection);
+		      console.log('get mint');
 
 		      const mint = await splToken.getMint(connection, mintPubkey);
 
 		      let accounts = await connection.getTokenAccountsByOwner(fromWallet.publicKey, {mint: mint.address});
-
-		      console.log(accounts);
 
 		  		if(accounts.value.length) {
 		  			let rawHtml = '';
@@ -206,9 +204,12 @@
 
 		  			accountSelect.innerHTML = rawHtml;
 
+		  			selectedValuteName.innerHTML = token;
+
 		  			accountSelectBox.style.display = '';
 
-
+			  		alert('Select account and push the button again');
+			  		return false;
 		  		} else {
 			      fromTokenAccount = web3.Keypair.generate();
 
