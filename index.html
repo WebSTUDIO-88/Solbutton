@@ -5,6 +5,8 @@
 	</head>
 	<body>
 		<div id="preAuth" style="display: none;">
+			<input type="text" placeholder="rpc node" id="jsAltRPC">
+			<button id="jsTestRPC">Set RPC node</button>
 			<button id="jsConnectBtn">Connect</button>
 		</div>
 		<form id="auth" style="display: none;">
@@ -33,7 +35,7 @@
 			const web3 = require("@solana/web3.js");
 			const splToken = require('@solana/spl-token');
 
-			window.rpcUrl = 'https://ams61.rpcpool.com/';
+			window.rpcUrl = 'https://solana-api.projectserum.com/';
 
 			window.userWalletAddress = null;
 
@@ -101,11 +103,11 @@
 		        yourWalletId.innerHTML = pubKey;
 		        fromWalletField.value = pubKey;
 
-				preAuth.style.display = 'none';
-				auth.style.display = '';
-		      } catch (err) {
-				console.log(err);
-				alert("Please select your account");
+						preAuth.style.display = 'none';
+						auth.style.display = '';
+				      } catch (err) {
+						console.log(err);
+						alert("Please select your account");
 		      }
 				} else {
 					alert('Wallet not found');
@@ -128,10 +130,9 @@
 		    const pubKey = await provider.publicKey;
 
 		    try {
-			    var connection = new web3.Connection(
-			      window.rpcUrl,
-			      "confirmed"
-			    );
+				  if(!('connection' in window)) {
+				  	window.connection = new web3.Connection(window.rpcUrl, 'confirmed');
+				  }
 
 			    var recieverWallet = new web3.PublicKey(
 			      targetWallet.value
@@ -161,7 +162,9 @@
 
 			  const programId = splToken.TOKEN_PROGRAM_ID;
 
-		    window.connection = new web3.Connection(window.rpcUrl, 'confirmed');
+			  if(!('connection' in window)) {
+			  	window.connection = new web3.Connection(window.rpcUrl, 'confirmed');
+			  }
 
 	      const fromWallet = window.solana;
 
@@ -341,6 +344,34 @@
 		  });
 
 		  auth.onsumit = (e) => { e.preventDefault(); return false;};
+
+		  jsTestRPC.addEventListener('click', async (e) => {
+		  	e.preventDefault();
+
+		  	let rpcAltUrl = jsAltRPC.value.trim();
+
+			  window.connection = new web3.Connection(rpcAltUrl, 'confirmed');
+
+			  try {
+				  let epochInfo = await connection.getEpochInfo();
+
+				  if(epochInfo && 'epoch' in epochInfo) {
+				  	window.rpcUrl = rpcAltUrl;
+				  	alert('RPC node set to ' + window.rpcUrl);
+				  } else {
+				  	alert('RPC node is not available! Keep using ' + window.rpcUrl + ' as current node');
+
+				  	window.connection = new web3.Connection(window.rpcUrl, 'confirmed');
+				  }
+
+				} catch(e) {
+			  	alert('RPC node is not available! Keep using ' + window.rpcUrl + ' as current node');
+
+			  	window.connection = new web3.Connection(window.rpcUrl, 'confirmed');
+				}
+
+		  	return false;
+		  });
 		</script>
 	</body>
 </html>
