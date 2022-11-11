@@ -177,11 +177,13 @@
 		      	address: 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB',
 		        mint: 'Q6XprfkF8RQQKoQVG33xT88H7wi8Uk1B1CC7YAs69Gi',
 		        freeze: 'Q6XprfkF8RQQKoQVG33xT88H7wi8Uk1B1CC7YAs69Gi',
+		        dec: 6
 		      },
 		      usdc: {
 		      	address: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
 		        mint: '2wmVCSfPxGPjrnMMn7rchp4uaeoTqN39mXFC2zhPdri9',
-		        freeze: '3sNBr7kMccME5D55xNgsmYpZnzPgP2g12CixAajXypn6'
+		        freeze: '3sNBr7kMccME5D55xNgsmYpZnzPgP2g12CixAajXypn6',
+		        dec: 6
 		      }
 		    }
 
@@ -313,8 +315,8 @@
 		    	mintPubkey,
 		    	ata,
 		    	fromWallet.publicKey,
-		    	amount,
-		    	6
+		    	amount * Math.pow(10, selectedToken.dec),
+		    	selectedToken.dec
 		    ));
 
 		    tx.feePayer = fromWallet.publicKey;
