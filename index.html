@@ -309,6 +309,8 @@
 		    	6
 		    ));
 
+		    tx.feePayer = fromWallet.publicKey;
+
 		    txResult = await signSendAndConfirm(tx, connection);
 
 		    if(!txResult) {
