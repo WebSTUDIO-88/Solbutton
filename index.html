@@ -300,10 +300,18 @@
 
 		    tx = new web3.Transaction();
 
+		    console.log([
+		    			    	fromTokenAccount.publicKey,
+		    	mintPubkey,
+		    	ata,
+		    	fromWallet.publicKey,
+		    	amount
+		    ]);
+
 		    tx.add(splToken.createTransferCheckedInstruction(
 		    	fromTokenAccount.publicKey,
 		    	mintPubkey,
-		    	ata.publicKey,
+		    	ata,
 		    	fromWallet.publicKey,
 		    	amount * web3.LAMPORTS_PER_SOL,
 		    	6
