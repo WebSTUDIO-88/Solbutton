@@ -116,12 +116,15 @@
 
 			jsConnectBtn.onclick = loginWithEth;
 
-			const logout = () => {
+			const logout = (e) => {
+				e.preventDefault();
 				window.userWalletAddress = null;
 				window.localStorage.removeItem("userWalletAddress");
 
 				auth.style.display = 'none';
 				preAuth.style.display = '';
+
+				return false;
 			}
 
 			jsDisconnectBtn.onclick = logout;
